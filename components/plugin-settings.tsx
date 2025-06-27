@@ -18,7 +18,7 @@ export function PluginSettings() {
   const [trackClicks, setTrackClicks] = useState(true)
   const [trackForms, setTrackForms] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [showSetupWizard, setShowSetupWizard] = useState(!trackingCode) // Show wizard if no tracking code set
+  const [showSetupWizard, setShowSetupWizard] = useState(false) // 預設為 false，直接顯示設定畫面
   const [wizardStep, setWizardStep] = useState(1)
   const [ddktAccountId, setDdktAccountId] = useState("")
   const [accountVerified, setAccountVerified] = useState(false)
@@ -42,12 +42,26 @@ export function PluginSettings() {
 
   const [appIdError, setAppIdError] = useState("")
 
+  const [trackUnlogins, setTrackUnlogins] = useState(true)
+
   // Check if app ID has changed from original verified value
   useEffect(() => {
     if (originalAppId && appId !== originalAppId) {
       setAppIdVerified(false)
     }
   }, [appId, originalAppId])
+
+  // 只在 client side 設定 tracking ID 預設值
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const generatedId =
+        window.location.hostname.replace(/\W/g, "") +
+        "-" +
+        Math.random().toString(36).substr(2, 6).toUpperCase()
+      setTrackingCode(generatedId)
+      setDdktAccountId(generatedId)
+    }
+  }, [])
 
   const handleSave = () => {
     setSaved(true)
@@ -138,11 +152,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="ddkt-site-account-id">DDKT site account ID</Label>
+                      <Label htmlFor="ddkt-site-account-id">DDKT site Tracking ID</Label>
                       <div className="flex space-x-2">
                         <Input
                           id="ddkt-site-account-id"
-                          placeholder="Enter your DDKT site account ID"
+                          placeholder="Enter your DDKT site Tracking ID"
                           value={ddktAccountId}
                           onChange={(e) => setDdktAccountId(e.target.value)}
                           className="flex-1"
@@ -155,6 +169,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                           {verifying ? "Verifying..." : accountVerified ? "Verified" : "Verify"}
                         </Button>
                       </div>
+                      <div className="mt-2 text-xs text-blue-600">This ID is a unique value generated based on your domain.</div>
                       {accountVerified && (
                         <div className="mt-2">
                           <Badge variant="default" className="bg-green-100 text-green-800">
@@ -294,7 +309,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <h3 className="font-medium text-green-900 mb-2">Setup Summary:</h3>
                     <ul className="text-sm text-green-800 space-y-1">
-                      <li>• DDKT site account ID: {ddktAccountId}</li>
+                      <li>• DDKT site Tracking ID: {ddktAccountId}</li>
                       <li>• Page Views: {trackPageViews ? "Enabled" : "Disabled"}</li>
                       <li>• Login Tracking: {trackLogins ? "Enabled" : "Disabled"}</li>
                       <li>• Search Tracking: {trackSearch ? "Enabled" : "Disabled"}</li>
@@ -364,9 +379,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       </div>
 
       {saved && (
-        <div className="bg-green-50 border border-green-200 rounded-md p-4 flex items-center">
-          <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-          <span className="text-green-800">Settings saved successfully!</span>
+        <div className="mt-4">
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            You are all set! Now you are able to send ecommerce events to DDKT Site Analysis
+          </Badge>
         </div>
       )}
 
@@ -392,103 +409,31 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
               <CardTitle>General</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-gray-600 mb-4">
-                Once you've saved your site account ID, you can able to send ecommerce events to{" "}
-                <a
-                  href="https://insight.ghtinc.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                >
-                  DDKT Site Analysis
-                </a>
-              </p>
-
-              <div className="space-y-2">
-                <Label htmlFor="app-id" className="text-base font-medium">
-                  DDKT site account ID
-                </Label>
-                <div className="flex space-x-2">
-                  <Input
-                    id="app-id"
-                    placeholder="Enter your DDKT site account ID"
-                    value={appId}
-                    onChange={(e) => handleAppIdChange(e.target.value)}
-                    className={`flex-1 border-2 ${
-                      appIdError ? "border-red-200 focus:border-red-400" : "border-gray-200 focus:border-blue-400"
-                    }`}
-                  />
-                  <Button
-                    onClick={handleVerifyAppId}
-                    disabled={!appId || appIdVerifying || (appIdVerified && appId === originalAppId)}
-                    variant="outline"
-                  >
-                    {appIdVerifying ? "Verifying..." : appIdVerified && appId === originalAppId ? "Verified" : "Verify"}
-                  </Button>
-                </div>
-
-                {/* Verification Status Badge */}
-                <div className="mt-2">
-                  {getVerificationStatus() === "verified" && (
-                    <Badge variant="default" className="bg-green-100 text-green-800">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Successfully Connected
-                    </Badge>
-                  )}
-                  {getVerificationStatus() === "not-connected" && (
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      Not Yet Connected
-                    </Badge>
-                  )}
-                  {getVerificationStatus() === "empty" && (
-                    <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      Not Yet Connected
-                    </Badge>
-                  )}
-                </div>
-
-                {appIdError ? (
-                  <p className="text-sm text-red-600">
-                    You can find your site account ID in Menu {">"} Site Analysis {">"} Site Account {">"} Site Account
-                    ID.
-                  </p>
-                ) : (
-                  <p className="text-sm text-gray-600">
-                    You can find your site account ID in Menu {">"} Site Analysis {">"} Site Account {">"} Site Account
-                    ID.
-                  </p>
-                )}
+              <div className="mb-6 text-gray-700">
+                All Set! You can now able to send ecommerce events and view Analytics in <a href="https://insight.ghtinc.com" className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">DDKT Site Analysis</a>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <Switch id="track-logins" checked={trackLogins} onCheckedChange={setTrackLogins} className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="track-logins" className="text-base font-medium">
-                      Track logins
-                    </Label>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Automatically track events when users log in.
-                      <br />
-                      This event will be logged on the subsequent page load after a user logs in.
-                    </p>
-                  </div>
+              <div className="flex items-center space-x-3 mb-4">
+                <Switch id="track-unlogins" checked={trackUnlogins} onCheckedChange={setTrackUnlogins} />
+                <div>
+                  <Label htmlFor="track-unlogins" className="font-medium">Track unlogins</Label>
+                  <div className="text-sm text-gray-600">Automatically track events when users visit and haven't login.</div>
                 </div>
+              </div>
 
-                <div className="flex items-start space-x-3">
-                  <Switch id="track-search" checked={trackSearch} onCheckedChange={setTrackSearch} className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="track-search" className="text-base font-medium">
-                      Track search made
-                    </Label>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Automatically track events when users search on your site.
-                      <br />
-                      This setting will turn on & off the "Search made" event.
-                    </p>
-                  </div>
+              <div className="flex items-center space-x-3 mb-4">
+                <Switch id="track-logins" checked={trackLogins} onCheckedChange={setTrackLogins} />
+                <div>
+                  <Label htmlFor="track-logins" className="font-medium">Track logins</Label>
+                  <div className="text-sm text-gray-600">Automatically track events when users log in.<br />This event will be logged on the subsequent page load after a user logs in.</div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 mb-4">
+                <Switch id="track-search" checked={trackSearch} onCheckedChange={setTrackSearch} />
+                <div>
+                  <Label htmlFor="track-search" className="font-medium">Track search made</Label>
+                  <div className="text-sm text-gray-600">Automatically track events when users search on your site.<br />This setting will turn on & off the "Search made" event.</div>
                 </div>
               </div>
             </CardContent>
