@@ -8,7 +8,7 @@ import { PluginSettings } from "@/components/plugin-settings"
 
 export default function WordPressDemo() {
   const [currentPage, setCurrentPage] = useState("dashboard")
-  const [pluginActivated, setPluginActivated] = useState(true)
+  const [pluginActivated, setPluginActivated] = useState(false)
 
   const handleActivatePlugin = () => {
     setPluginActivated(true)
